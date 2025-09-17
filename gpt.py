@@ -9,7 +9,7 @@ import openai
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
-WEBHOOK_URL = f"https://your-bot-domain.com/{BOT_TOKEN}"  # Change to your deployed URL
+WEBHOOK_URL = f"https://gpt-premium-shadow.onrender.com/{BOT_TOKEN}"  # Change to your deployed URL
 API_URL = f"https://api.telegram.org/bot{BOT_TOKEN}/"
 
 app = Flask(__name__)
@@ -179,4 +179,5 @@ def set_webhook():
 if __name__ == "__main__":
     set_webhook()
     port = int(os.environ.get("PORT", 5000))
+
     app.run(host="0.0.0.0", port=port)
