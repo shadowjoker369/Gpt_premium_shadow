@@ -8,9 +8,13 @@ import openai
 # -----------------------------
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+PORT = int(os.environ.get("PORT", 5000))  # Render.com automatically sets PORT
 
-WEBHOOK_URL = f"https://gpt-premium-shadow.onrender.com/{BOT_TOKEN}"  # Change to your deployed URL
+WEBHOOK_URL = f"https://gpt-premium-shadow.onrender.com/{BOT_TOKEN}"  # Change to your Render URL
 API_URL = f"https://api.telegram.org/bot{BOT_TOKEN}/"
+
+# Set OpenAI API key
+openai.api_key = OPENAI_API_KEY
 
 app = Flask(__name__)
 
@@ -20,23 +24,22 @@ app = Flask(__name__)
 user_context = {}  # {user_id: [messages]}
 
 # -----------------------------
-# OpenAI Chat Function
+# OpenAI Chat Function (1.x compatible)
 # -----------------------------
 def chat_with_ai(user_id, prompt: str) -> str:
     try:
         messages = user_context.get(user_id, [])
         messages.append({"role": "user", "content": prompt})
 
-        response = openai.ChatCompletion.create(
+        response = openai.chat.completions.create(
             model="gpt-5-mini",
-            messages=messages,
-            api_key=OPENAI_API_KEY
+            messages=messages
         )
 
         answer = response.choices[0].message.content
         messages.append({"role": "assistant", "content": answer})
 
-        # Save only last 10 messages per user to reduce memory
+        # Save last 10 messages to reduce memory usage
         user_context[user_id] = messages[-10:]
         return answer
     except Exception as e:
@@ -79,6 +82,7 @@ def home():
 @app.route(f"/{BOT_TOKEN}", methods=["POST"])
 def webhook():
     update = request.get_json()
+    print("Request JSON:", update)  # Request logging
 
     # -----------------------------
     # Handle messages
@@ -89,14 +93,13 @@ def webhook():
         user_id = message["from"]["id"]
         text = message.get("text", "")
 
-        # -----------------------------
-        # Commands
-        # -----------------------------
         if text == "/start":
             send_message(
                 chat_id,
                 "👋 Welcome to *Professional ChatGPT Bot* 🤖\n\n"
-                "Type anything to chat with the AI or use the menu below ⬇️",
+                "Type anything to chat with AI or use the menu below ⬇️\n\n"
+                "━━━━━━━━━━━━━━━\n"
+                "👤 *Credits: SHADOW JOKER*",
                 main_menu
             )
 
@@ -114,7 +117,7 @@ def webhook():
             send_message(
                 chat_id,
                 "ℹ️ *About Professional ChatGPT Bot*\n\n"
-                "This bot uses OpenAI GPT API to chat like ChatGPT.\n"
+                "This bot uses OpenAI GPT API (GPT-5 mini) to chat like ChatGPT.\n"
                 "Developer: SHADOW JOKER",
                 main_menu
             )
@@ -124,7 +127,7 @@ def webhook():
             send_message(chat_id, "♻️ Your conversation memory has been reset.", main_menu)
 
         else:
-            # Treat any other message as AI chat
+            # Treat any other message as GPT chat
             reply = chat_with_ai(user_id, text)
             send_message(chat_id, reply, main_menu)
 
@@ -141,7 +144,7 @@ def webhook():
             send_message(
                 chat_id,
                 "ℹ️ *About Professional ChatGPT Bot*\n\n"
-                "This bot uses OpenAI GPT API to chat like ChatGPT.\n"
+                "This bot uses OpenAI GPT API (GPT-5 mini) to chat like ChatGPT.\n"
                 "Developer: SHADOW JOKER",
                 main_menu
             )
@@ -157,7 +160,7 @@ def webhook():
             send_message(
                 chat_id,
                 "⚡ *Help Menu* ⚡\n\n"
-                "- Type anything to chat with the AI.\n"
+                "- Type anything to chat with AI.\n"
                 "- Use the buttons to navigate.\n"
                 "- /reset : Clear conversation memory",
                 main_menu
@@ -172,12 +175,13 @@ def webhook():
 # Set Webhook Automatically
 # -----------------------------
 def set_webhook():
-    res = requests.get(API_URL + "setWebhook", params={"url": WEBHOOK_URL})
-    print("Webhook setup response:", res.json())
+    try:
+        res = requests.get(API_URL + "setWebhook", params={"url": WEBHOOK_URL})
+        print("Webhook setup response:", res.json())
+    except Exception as e:
+        print("Webhook setup error:", e)
 
 # -----------------------------
 if __name__ == "__main__":
     set_webhook()
-    port = int(os.environ.get("PORT", 5000))
-
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=PORT)
